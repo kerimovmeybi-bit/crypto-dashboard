@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CryptoCoin } from '../types/crypto';
-import { X, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { X, ArrowUpRight, ArrowDownRight,} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CoinModalProps {
