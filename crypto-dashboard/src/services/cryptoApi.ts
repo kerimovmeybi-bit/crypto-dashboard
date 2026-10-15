@@ -1,4 +1,4 @@
-import type { CryptoCoin } from '../types/crypto';
+import type { CryptoCoin, CoinTicker } from '../types/crypto';
 
 const BASE_URL = 'https://api.coingecko.com/api/v3';
 
@@ -17,5 +17,22 @@ export const fetchTopCoins = async (): Promise<CryptoCoin[]> => {
   } catch (error) {
     console.error('API Error:', error);
     throw error;
+  }
+};
+
+export const fetchCoinTickers = async (coinId: string): Promise<CoinTicker[]> => {
+  try {
+    const response = await fetch(`${BASE_URL}/coins/${coinId}/tickers`);
+    
+    if (!response.ok) {
+      throw new Error('Не удалось загрузить биржевые данные');
+    }
+
+    const data = await response.json();
+    // Возвращаем первые 5 бирж для наглядности
+    return data.tickers.slice(0, 5);
+  } catch (error) {
+    console.error('Tickers API Error:', error);
+    return [];
   }
 };

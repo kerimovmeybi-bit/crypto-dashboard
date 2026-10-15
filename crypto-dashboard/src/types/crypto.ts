@@ -13,3 +13,20 @@ export interface CryptoCoin {
         price: number[];
     };
 }
+
+export interface CoinTicker {
+  market: {
+    name: string;
+    identifier: string;
+  };
+  base: string;
+  target: string;
+  converted_last: {
+    usd: number;
+  };
+  trade_url: string;
+}
+
+export interface CoinDetailData extends CryptoCoin {
+  tickers?: CoinTicker[];
+}
