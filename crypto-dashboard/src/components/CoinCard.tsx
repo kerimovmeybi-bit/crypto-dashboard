@@ -1,115 +1,111 @@
 import React from 'react';
 import type { CryptoCoin } from '../types/crypto';
-import { TrendingUp, TrendingDown, Star } from 'lucide-react';
+import { Star, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { SparklineChart } from './SparklineChart';
 
 interface CoinCardProps {
   coin: CryptoCoin;
   isFavorite: boolean;
-  onToggleFavorite: (coinId: string, e: React.MouseEvent) => void;
+  onToggleFavorite: (id: string, e: React.MouseEvent) => void;
   onClick: () => void;
 }
 
-export const CoinCard: React.FC<CoinCardProps> = ({ 
-  coin, 
-  isFavorite, 
-  onToggleFavorite, 
-  onClick 
+export const CoinCard: React.FC<CoinCardProps> = ({
+  coin,
+  isFavorite,
+  onToggleFavorite,
+  onClick,
 }) => {
   const isPositive = coin.price_change_percentage_24h >= 0;
+  const glowColor = isPositive ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)';
 
   return (
-    <motion.div 
-      className="crypto-card"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+    <motion.div
       onClick={onClick}
+      whileHover={{ y: -6, scale: 1.02 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
       style={{
+        position: 'relative',
+        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
         borderRadius: '20px',
-        padding: '1.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
+        padding: '1.25rem',
         cursor: 'pointer',
-        position: 'relative'
+        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+        overflow: 'hidden'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = `0 15px 30px -5px ${glowColor}, 0 0 15px ${glowColor}`;
+        e.currentTarget.style.borderColor = isPositive ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.3)';
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
       }}
     >
-      <div>
-        {/* Шапка карточки */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <img src={coin.image} alt={coin.name} style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
-            <div>
-              <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: '600' }}>{coin.name}</h3>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '500', textTransform: 'uppercase' }}>{coin.symbol}</span>
-            </div>
+      {/* Шапка карточки */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <img src={coin.image} alt={coin.name} style={{ width: '38px', height: '38px', borderRadius: '50%' }} />
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{coin.name}</h3>
+            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase' }}>
+              {coin.symbol}
+            </span>
           </div>
-
-          <button
-            onClick={(e) => onToggleFavorite(coin.id, e)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0.4rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <Star 
-              size={22} 
-              color={isFavorite ? '#f59e0b' : '#4b5563'} 
-              fill={isFavorite ? '#f59e0b' : 'transparent'} 
-            />
-          </button>
         </div>
 
-        {/* Цена, Проценты и Мини-график */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1rem' }}>
-          <div>
-            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff', letterSpacing: '-0.5px', marginBottom: '0.5rem' }}>
-              ${coin.current_price.toLocaleString()}
-            </div>
+        <button
+          onClick={(e) => onToggleFavorite(coin.id, e)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: isFavorite ? '#eab308' : '#475569',
+            cursor: 'pointer',
+            padding: '0.25rem',
+            transition: 'color 0.2s'
+          }}
+        >
+          <Star size={20} fill={isFavorite ? '#eab308' : 'none'} />
+        </button>
+      </div>
 
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              padding: '0.35rem 0.75rem',
-              borderRadius: '10px',
-              fontSize: '0.85rem',
-              fontWeight: '600',
-              backgroundColor: isPositive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-              color: isPositive ? '#34d399' : '#f87171',
-              border: `1px solid ${isPositive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
-            }}>
-              {isPositive ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
-              {Math.abs(coin.price_change_percentage_24h).toFixed(2)}%
-            </div>
-          </div>
+      {/* Цена и изменение */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
+        <span style={{ fontSize: '1.35rem', fontWeight: '800', color: '#fff' }}>
+          ${coin.current_price.toLocaleString()}
+        </span>
 
-          {/* График Sparkline */}
-          {coin.sparkline_in_7d && (
-            <div style={{ opacity: 0.85, paddingBottom: '0.2rem' }}>
-              <SparklineChart data={coin.sparkline_in_7d.price} isPositive={isPositive} />
-            </div>
-          )}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.2rem',
+          padding: '0.25rem 0.6rem',
+          borderRadius: '8px',
+          fontSize: '0.8rem',
+          fontWeight: '700',
+          backgroundColor: isPositive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+          color: isPositive ? '#4ade80' : '#f87171'
+        }}>
+          {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+          {Math.abs(coin.price_change_percentage_24h).toFixed(2)}%
         </div>
       </div>
 
-      {/* Футер карточки */}
+      {/* Капитализация */}
       <div style={{
-        paddingTop: '1rem',
-        borderTop: '1px solid var(--border-color)',
+        paddingTop: '0.75rem',
+        borderTop: '1px solid rgba(255, 255, 255, 0.06)',
         display: 'flex',
         justifyContent: 'space-between',
-        color: 'var(--text-secondary)',
+        color: '#94a3b8',
         fontSize: '0.8rem'
       }}>
         <span>Market Cap</span>
-        <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>${(coin.market_cap / 1e9).toFixed(2)}B</span>
+        <span style={{ color: '#fff', fontWeight: '600' }}>
+          ${(coin.market_cap / 1e9).toFixed(2)}B
+        </span>
       </div>
     </motion.div>
   );

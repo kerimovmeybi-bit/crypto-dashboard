@@ -21,6 +21,7 @@ export interface CoinTicker {
   };
   base: string;
   target: string;
+  last: number;
   converted_last: {
     usd: number;
   };
