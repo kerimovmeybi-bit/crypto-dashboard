@@ -49,8 +49,8 @@ export const fetchCoinTickers = async (coinId: string): Promise<CoinTicker[]> =>
     // Если нашли пары с USD/USDT — берем их, иначе исходный массив
     const tickersToUse = validTickers.length > 0 ? validTickers : rawTickers;
 
-    // Возвращаем первые 5 бирж
-    return tickersToUse.slice(0, 5);
+    // Увеличиваем количество отображаемых бирж с 5 до 12
+    return tickersToUse.slice(0, 12);
   } catch (error) {
     console.error('Tickers API Error:', error);
     return [];

@@ -6,14 +6,17 @@ import { CoinCard } from './components/CoinCard';
 import { CoinModal } from './components/CoinModal';
 import { Converter } from './components/Converter';
 import { FearGreedWidget } from './components/FearGreedWidget';
+import { MarketStatsBar } from './components/MarketStatsBar';
 import { PortfolioTracker } from './components/PortfolioTracker';
 import { PriceAlerts } from './components/PriceAlerts';
+import { CryptoCompareWidget } from './components/CryptoCompareWidget';
 import { CryptoNews } from './components/CryptoNews';
 import { Footer } from './components/Footer';
 import { Loader2, RefreshCw, Star, Layers, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export type SortOption = 'market_cap_desc' | 'price_desc' | 'price_asc' | 'change_desc' | 'change_asc';
+export type CategoryOption = 'all' | 'layer1' | 'defi' | 'meme' | 'stablecoins';
 
 export function App() {
   const [coins, setCoins] = useState<CryptoCoin[]>([]);
@@ -21,6 +24,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortOption>('market_cap_desc');
+  const [category, setCategory] = useState<CategoryOption>('all');
 
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('crypto_theme');
@@ -72,12 +76,23 @@ export function App() {
     );
   };
 
+  const isCategoryMatch = (symbol: string, cat: CategoryOption) => {
+    const sym = symbol.toLowerCase();
+    if (cat === 'all') return true;
+    if (cat === 'layer1') return ['btc', 'eth', 'sol', 'ada', 'avax', 'near', 'sui', 'ton', 'trx', 'dot'].includes(sym);
+    if (cat === 'defi') return ['uni', 'aave', 'mkr', 'crv', 'ldo', 'pancakeswap'].includes(sym);
+    if (cat === 'meme') return ['doge', 'shib', 'pepe', 'bonk', 'wif', 'floki'].includes(sym);
+    if (cat === 'stablecoins') return ['usdt', 'usdc', 'dai', 'fdusd'].includes(sym);
+    return true;
+  };
+
   const filteredAndSortedCoins = coins
     .filter((coin) => {
       const matchesSearch = coin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             coin.symbol.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTab = activeTab === 'all' || favorites.includes(coin.id);
-      return matchesSearch && matchesTab;
+      const matchesCategory = isCategoryMatch(coin.symbol, category);
+      return matchesSearch && matchesTab && matchesCategory;
     })
     .sort((a, b) => {
       if (sortBy === 'price_desc') return b.current_price - a.current_price;
@@ -123,100 +138,136 @@ export function App() {
         />
 
         <FearGreedWidget />
+        <MarketStatsBar coins={coins} />
 
         {!loading && !error && coins.length > 0 && (
           <>
             <Converter coins={coins} />
             <PortfolioTracker coins={coins} />
             <PriceAlerts coins={coins} />
+            <CryptoCompareWidget coins={coins} />
             <CryptoNews />
           </>
         )}
 
-        {/* Панель управления */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.35rem', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-            <button
-              onClick={() => setActiveTab('all')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.5rem 1rem',
-                borderRadius: '10px',
-                border: 'none',
-                background: activeTab === 'all' ? '#6366f1' : 'transparent',
-                color: activeTab === 'all' ? '#fff' : '#94a3b8',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              <Layers size={16} /> Все монеты
-            </button>
-            <button
-              onClick={() => setActiveTab('favorites')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.5rem 1rem',
-                borderRadius: '10px',
-                border: 'none',
-                background: activeTab === 'favorites' ? '#6366f1' : 'transparent',
-                color: activeTab === 'favorites' ? '#fff' : '#94a3b8',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              <Star size={16} /> Избранное ({favorites.length})
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.5rem 0.85rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <ArrowUpDown size={16} color="#94a3b8" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
+        {/* Панель управления и фильтры */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            
+            {/* Табы Все / Избранное */}
+            <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.35rem', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <button
+                onClick={() => setActiveTab('all')}
                 style={{
-                  background: 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '10px',
                   border: 'none',
-                  color: '#fff',
-                  fontWeight: '500',
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                  cursor: 'pointer'
+                  background: activeTab === 'all' ? '#6366f1' : 'transparent',
+                  color: activeTab === 'all' ? '#fff' : '#94a3b8',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
               >
-                <option value="market_cap_desc" style={{ background: '#0f172a' }}>По Капитализации</option>
-                <option value="price_desc" style={{ background: '#0f172a' }}>Сначала дорогие</option>
-                <option value="price_asc" style={{ background: '#0f172a' }}>Сначала дешевые</option>
-                <option value="change_desc" style={{ background: '#0f172a' }}>Лидеры роста (24h)</option>
-                <option value="change_asc" style={{ background: '#0f172a' }}>Лидеры падения (24h)</option>
-              </select>
+                <Layers size={16} /> Все монеты
+              </button>
+              <button
+                onClick={() => setActiveTab('favorites')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: activeTab === 'favorites' ? '#6366f1' : 'transparent',
+                  color: activeTab === 'favorites' ? '#fff' : '#94a3b8',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Star size={16} /> Избранное ({favorites.length})
+              </button>
             </div>
 
-            <button
-              onClick={loadCoins}
-              disabled={loading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.6rem 1.2rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'rgba(15, 23, 42, 0.6)',
-                color: '#fff',
-                cursor: 'pointer',
-                fontWeight: '500'
-              }}
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-              Обновить
-            </button>
+            {/* Фильтры по категориям */}
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              {[
+                { id: 'all', label: 'Все' },
+                { id: 'layer1', label: '⚡ Layer 1' },
+                { id: 'defi', label: '🏦 DeFi' },
+                { id: 'meme', label: '🐕 Meme' },
+                { id: 'stablecoins', label: '💵 Стейблкоины' },
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setCategory(cat.id as CategoryOption)}
+                  style={{
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: '10px',
+                    border: '1px solid',
+                    borderColor: category === cat.id ? '#6366f1' : 'rgba(255, 255, 255, 0.08)',
+                    backgroundColor: category === cat.id ? 'rgba(99, 102, 241, 0.2)' : 'rgba(15, 23, 42, 0.4)',
+                    color: category === cat.id ? '#818cf8' : '#94a3b8',
+                    fontSize: '0.8rem',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Сортировка и кнопка обновления */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.5rem 0.85rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <ArrowUpDown size={16} color="#94a3b8" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#fff',
+                    fontWeight: '500',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="market_cap_desc" style={{ background: '#0f172a' }}>По Капитализации</option>
+                  <option value="price_desc" style={{ background: '#0f172a' }}>Сначала дорогие</option>
+                  <option value="price_asc" style={{ background: '#0f172a' }}>Сначала дешевые</option>
+                  <option value="change_desc" style={{ background: '#0f172a' }}>Лидеры роста (24h)</option>
+                  <option value="change_asc" style={{ background: '#0f172a' }}>Лидеры падения (24h)</option>
+                </select>
+              </div>
+
+              <button
+                onClick={loadCoins}
+                disabled={loading}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.6rem 1.2rem',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                Обновить
+              </button>
+            </div>
           </div>
         </div>
 

@@ -14,12 +14,12 @@ export const CoinModal: React.FC<CoinModalProps> = ({ coin, onClose }) => {
   const [chartData, setChartData] = useState<{ time: string; price: number }[]>([]);
   const [loading, setLoading] = useState(false);
   const [amountUsd, setAmountUsd] = useState<number>(1000);
+  const [feePercentage, setFeePercentage] = useState<number>(0.1); // Комиссия одной сделки (по умолчанию 0.1%)
 
   useEffect(() => {
     if (coin) {
       setLoading(true);
       
-      // Загружаем одновременно данные бирж и график
       Promise.all([
         fetchCoinTickers(coin.id),
         fetchCoinMarketChart(coin.id)
@@ -27,7 +27,6 @@ export const CoinModal: React.FC<CoinModalProps> = ({ coin, onClose }) => {
         .then(([tickerData, pricesData]) => {
           setTickers(tickerData);
           
-          // Форматируем данные для Recharts
           const formatted = pricesData.map(([timestamp, price]) => {
             const date = new Date(timestamp);
             return {
@@ -48,11 +47,17 @@ export const CoinModal: React.FC<CoinModalProps> = ({ coin, onClose }) => {
   const minPrice = prices.length > 0 ? Math.min(...prices) : null;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : null;
 
-  const arbitrageSpread = minPrice && maxPrice && minPrice > 0 
+  // Грязный спред без комиссий (%)
+  const rawSpread = minPrice && maxPrice && minPrice > 0 
     ? ((maxPrice - minPrice) / minPrice) * 100 
     : 0;
 
-  const potentialProfit = (amountUsd * arbitrageSpread) / 100;
+  // Расчет чистой прибыли с учетом комиссий:
+  // Покупка по minPrice с комиссией -> Перевод -> Продажа по maxPrice с комиссией (всего 2 комиссии)
+  const totalFeePercent = feePercentage * 2;
+  const netSpread = rawSpread - totalFeePercent;
+  const netProfit = (amountUsd * netSpread) / 100;
+
   const isPositive = coin.price_change_percentage_24h >= 0;
   const strokeColor = isPositive ? '#22c55e' : '#ef4444';
 
@@ -175,7 +180,7 @@ export const CoinModal: React.FC<CoinModalProps> = ({ coin, onClose }) => {
           </div>
         </div>
 
-        {/* Калькулятор арбитража */}
+        {/* Обновленный калькулятор арбитража с комиссией */}
         {minPrice && maxPrice && minPrice !== maxPrice && (
           <div style={{
             backgroundColor: 'rgba(99, 102, 241, 0.1)',
@@ -186,11 +191,11 @@ export const CoinModal: React.FC<CoinModalProps> = ({ coin, onClose }) => {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#a5b4fc', fontWeight: '600', fontSize: '0.9rem' }}>
               <Calculator size={18} />
-              Калькулятор арбитражной прибыли
+              Калькулятор арбитражной прибыли (с учетом комиссий)
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: '140px' }}>
+              <div style={{ flex: 1, minWidth: '130px' }}>
                 <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Сумма сделки ($)</label>
                 <input
                   type="number"
@@ -209,10 +214,34 @@ export const CoinModal: React.FC<CoinModalProps> = ({ coin, onClose }) => {
                 />
               </div>
 
+              <div style={{ flex: 1, minWidth: '110px' }}>
+                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Комиссия биржи (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={feePercentage}
+                  onChange={(e) => setFeePercentage(Math.max(0, Number(e.target.value)))}
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '10px',
+                    padding: '0.5rem 0.75rem',
+                    color: '#fff',
+                    fontWeight: '600',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
               <div style={{ flex: 1, minWidth: '140px' }}>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Спред / Профит</span>
-                <span style={{ fontSize: '1.1rem', fontWeight: '700', color: '#4ade80' }}>
-                  +{arbitrageSpread.toFixed(2)}% (${potentialProfit.toFixed(2)})
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Чистый Спред / Профит</span>
+                <span style={{
+                  fontSize: '1.1rem',
+                  fontWeight: '700',
+                  color: netProfit >= 0 ? '#4ade80' : '#f87171'
+                }}>
+                  {netProfit >= 0 ? '+' : ''}{netSpread.toFixed(2)}% (${netProfit.toFixed(2)})
                 </span>
               </div>
             </div>

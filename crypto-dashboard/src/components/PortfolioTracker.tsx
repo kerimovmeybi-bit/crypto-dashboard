@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { CryptoCoin } from '../types/crypto';
-import { Wallet, Plus, Trash2, PieChart } from 'lucide-react';
+import { Wallet, Plus, Trash2, Download, Upload } from 'lucide-react';
 
 interface PortfolioItem {
   coinId: string;
@@ -17,36 +17,28 @@ export const PortfolioTracker: React.FC<PortfolioTrackerProps> = ({ coins }) => 
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [selectedCoinId, setSelectedCoinId] = useState<string>(coins[0]?.id || '');
+  const [selectedCoinId, setSelectedCoinId] = useState<string>(coins[0]?.id || 'bitcoin');
   const [amountInput, setAmountInput] = useState<string>('');
 
   useEffect(() => {
     localStorage.setItem('crypto_portfolio', JSON.stringify(portfolio));
   }, [portfolio]);
 
-  // Если монеты загрузились, а выбор пустой — ставим первую
-  useEffect(() => {
-    if (coins.length > 0 && !selectedCoinId) {
-      setSelectedCoinId(coins[0].id);
-    }
-  }, [coins, selectedCoinId]);
-
   const handleAddAsset = (e: React.FormEvent) => {
     e.preventDefault();
     const numAmount = parseFloat(amountInput);
-    if (!selectedCoinId || isNaN(numAmount) || numAmount <= 0) return;
+    if (!numAmount || numAmount <= 0) return;
 
     setPortfolio(prev => {
-      const existingIndex = prev.findIndex(item => item.coinId === selectedCoinId);
-      if (existingIndex > -1) {
-        // Если монета уже есть, прибавляем количество
-        const updated = [...prev];
-        updated[existingIndex].amount += numAmount;
-        return updated;
-      } else {
-        // Иначе добавляем новую
-        return [...prev, { coinId: selectedCoinId, amount: numAmount }];
+      const existing = prev.find(item => item.coinId === selectedCoinId);
+      if (existing) {
+        return prev.map(item =>
+          item.coinId === selectedCoinId
+            ? { ...item, amount: item.amount + numAmount }
+            : item
+        );
       }
+      return [...prev, { coinId: selectedCoinId, amount: numAmount }];
     });
 
     setAmountInput('');
@@ -56,10 +48,38 @@ export const PortfolioTracker: React.FC<PortfolioTrackerProps> = ({ coins }) => 
     setPortfolio(prev => prev.filter(item => item.coinId !== coinId));
   };
 
-  // Считаем общую стоимость портфеля
-  const totalPortfolioValue = portfolio.reduce((sum, item) => {
+  // Экспорт данных в JSON
+  const handleExportJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(portfolio, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "crypto_portfolio_backup.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // Импорт данных из JSON
+  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader();
+    if (e.target.files && e.target.files[0]) {
+      fileReader.readAsText(e.target.files[0], "UTF-8");
+      fileReader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target?.result as string);
+          if (Array.isArray(parsed)) {
+            setPortfolio(parsed);
+          }
+        } catch (err) {
+          alert('Ошибка при чтении файла JSON');
+        }
+      };
+    }
+  };
+
+  const totalValue = portfolio.reduce((acc, item) => {
     const coin = coins.find(c => c.id === item.coinId);
-    return sum + (coin ? coin.current_price * item.amount : 0);
+    return acc + (coin ? coin.current_price * item.amount : 0);
   }, 0);
 
   return (
@@ -69,11 +89,10 @@ export const PortfolioTracker: React.FC<PortfolioTrackerProps> = ({ coins }) => 
       borderRadius: '20px',
       padding: '1.5rem',
       marginBottom: '1.5rem',
-      boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
       color: '#fff'
     }}>
-      {/* Шапка портфеля */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+      {/* Шапка блока */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
             display: 'flex',
@@ -93,41 +112,78 @@ export const PortfolioTracker: React.FC<PortfolioTrackerProps> = ({ coins }) => 
           </div>
         </div>
 
-        <div style={{
-          backgroundColor: 'rgba(30, 41, 59, 0.6)',
-          border: '1px solid #334155',
-          padding: '0.6rem 1.25rem',
-          borderRadius: '14px',
-          textAlign: 'right'
-        }}>
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Общая стоимость</span>
-          <span style={{ fontSize: '1.35rem', fontWeight: '800', color: '#34d399' }}>
-            ${totalPortfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {/* Кнопки Экспорта/Импорта */}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={handleExportJSON}
+              title="Экспортировать портфель в JSON"
+              style={{
+                backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                border: '1px solid #334155',
+                color: '#94a3b8',
+                padding: '0.4rem 0.6rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontSize: '0.75rem'
+              }}
+            >
+              <Download size={14} /> JSON
+            </button>
+            <label title="Импортировать портфель из JSON" style={{
+              backgroundColor: 'rgba(30, 41, 59, 0.6)',
+              border: '1px solid #334155',
+              color: '#94a3b8',
+              padding: '0.4rem 0.6rem',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              fontSize: '0.75rem'
+            }}>
+              <Upload size={14} /> Импорт
+              <input type="file" accept=".json" onChange={handleImportJSON} style={{ display: 'none' }} />
+            </label>
+          </div>
+
+          <div style={{
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            border: '1px solid rgba(34, 197, 94, 0.2)',
+            padding: '0.5rem 1rem',
+            borderRadius: '12px',
+            textAlign: 'right'
+          }}>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Общая стоимость</span>
+            <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#4ade80' }}>
+              ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Форма добавления актива */}
+      {/* Форма добавления */}
       <form onSubmit={handleAddAsset} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         <select
           value={selectedCoinId}
           onChange={(e) => setSelectedCoinId(e.target.value)}
           style={{
-            flex: '2',
-            minWidth: '160px',
+            flex: 1,
+            minWidth: '180px',
             backgroundColor: '#1e293b',
             border: '1px solid #334155',
-            borderRadius: '12px',
-            padding: '0.7rem 1rem',
             color: '#fff',
-            fontWeight: '600',
-            outline: 'none',
-            cursor: 'pointer'
+            padding: '0.6rem 0.85rem',
+            borderRadius: '10px',
+            outline: 'none'
           }}
         >
-          {coins.map(coin => (
-            <option key={coin.id} value={coin.id} style={{ background: '#0f172a' }}>
-              {coin.name} ({coin.symbol.toUpperCase()}) — ${coin.current_price.toLocaleString()}
+          {coins.map(c => (
+            <option key={c.id} value={c.id}>
+              {c.name} ({c.symbol.toUpperCase()}) — ${c.current_price.toLocaleString()}
             </option>
           ))}
         </select>
@@ -139,14 +195,13 @@ export const PortfolioTracker: React.FC<PortfolioTrackerProps> = ({ coins }) => 
           value={amountInput}
           onChange={(e) => setAmountInput(e.target.value)}
           style={{
-            flex: '2',
-            minWidth: '160px',
+            flex: 1,
+            minWidth: '180px',
             backgroundColor: '#1e293b',
             border: '1px solid #334155',
-            borderRadius: '12px',
-            padding: '0.7rem 1rem',
             color: '#fff',
-            fontWeight: '600',
+            padding: '0.6rem 0.85rem',
+            borderRadius: '10px',
             outline: 'none'
           }}
         />
@@ -154,83 +209,60 @@ export const PortfolioTracker: React.FC<PortfolioTrackerProps> = ({ coins }) => 
         <button
           type="submit"
           style={{
-            flex: '1',
-            minWidth: '120px',
             backgroundColor: '#6366f1',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '0.7rem 1rem',
             color: '#fff',
+            border: 'none',
+            padding: '0.6rem 1.25rem',
+            borderRadius: '10px',
             fontWeight: '600',
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.4rem',
-            cursor: 'pointer',
-            transition: 'background 0.2s'
+            gap: '0.4rem'
           }}
         >
           <Plus size={18} /> Добавить
         </button>
       </form>
 
-      {/* Список добавленных монет в портфеле */}
+      {/* Список активов */}
       {portfolio.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#64748b', fontSize: '0.85rem' }}>
+        <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '0.9rem' }}>
           Портфель пуст. Добавьте свою первую монету выше!
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {portfolio.map(item => {
             const coin = coins.find(c => c.id === item.coinId);
             if (!coin) return null;
-            const assetTotalValue = coin.current_price * item.amount;
-            const sharePercent = totalPortfolioValue > 0 ? (assetTotalValue / totalPortfolioValue) * 100 : 0;
+            const itemTotal = coin.current_price * item.amount;
 
             return (
               <div key={item.coinId} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 backgroundColor: 'rgba(30, 41, 59, 0.4)',
                 border: '1px solid #1e293b',
-                borderRadius: '14px',
-                padding: '1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                position: 'relative'
+                borderRadius: '12px',
+                padding: '0.75rem 1rem'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <img src={coin.image} alt={coin.name} style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600' }}>{coin.name}</h4>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.amount} {coin.symbol.toUpperCase()}</span>
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <img src={coin.image} alt={coin.name} style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
+                  <div>
+                    <span style={{ fontWeight: '700', color: '#fff' }}>{coin.name}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '0.5rem' }}>{item.amount} {coin.symbol.toUpperCase()}</span>
                   </div>
+                </div>
 
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <span style={{ fontWeight: '700', color: '#e2e8f0' }}>${itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   <button
                     onClick={() => handleRemoveAsset(item.coinId)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#64748b',
-                      cursor: 'pointer',
-                      padding: '0.2rem',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                    title="Удалить актив"
+                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem' }}
                   >
                     <Trash2 size={16} />
                   </button>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '0.5rem' }}>
-                  <span style={{ fontSize: '1.05rem', fontWeight: '700', color: '#fff' }}>
-                    ${assetTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: '#818cf8', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                    <PieChart size={12} /> {sharePercent.toFixed(1)}%
-                  </span>
                 </div>
               </div>
             );
