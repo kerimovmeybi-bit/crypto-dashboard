@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { StockCompany } from '../types/stock';
-import { X, TrendingUp, TrendingDown, ExternalLink, Calculator } from 'lucide-react';
+import { X, ExternalLink, Calculator } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 
