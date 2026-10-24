@@ -10,6 +10,7 @@ import { MarketStatsBar } from './components/MarketStatsBar';
 import { PortfolioTracker } from './components/PortfolioTracker';
 import { PriceAlerts } from './components/PriceAlerts';
 import { CryptoCompareWidget } from './components/CryptoCompareWidget';
+import { StockMarketWidget } from './components/StockMarketWidget';
 import { CryptoNews } from './components/CryptoNews';
 import { Footer } from './components/Footer';
 import { Loader2, RefreshCw, Star, Layers, ArrowUpDown } from 'lucide-react';
@@ -120,16 +121,47 @@ export function App() {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#0b0f19',
-      backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%)',
+      backgroundColor: '#030712',
+      backgroundImage: `
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.18) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%)
+      `,
+      backgroundAttachment: 'fixed',
       padding: '2rem 1.5rem 0 1.5rem',
       boxSizing: 'border-box',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'space-between',
-      transition: 'background-color 0.3s ease'
+      position: 'relative',
+      overflow: 'hidden'
     }}>
-      <div style={{ maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
+      {/* Декоративные фоновые сферы (Glow Orbs) */}
+      <div style={{
+        position: 'absolute',
+        top: '-10%',
+        left: '20%',
+        width: '400px',
+        height: '400px',
+        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(0,0,0,0) 70%)',
+        filter: 'blur(80px)',
+        pointerEvents: 'none',
+        zIndex: 0
+      }} />
+      <div style={{
+        position: 'absolute',
+        top: '40%',
+        right: '-5%',
+        width: '500px',
+        height: '500px',
+        background: 'radial-gradient(circle, rgba(168, 85, 247, 0.18) 0%, rgba(0,0,0,0) 70%)',
+        filter: 'blur(100px)',
+        pointerEvents: 'none',
+        zIndex: 0
+      }} />
+
+      <div style={{ maxWidth: '1200px', width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <Header
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -142,19 +174,19 @@ export function App() {
 
         {!loading && !error && coins.length > 0 && (
           <>
-            <Converter coins={coins} />
-            <PortfolioTracker coins={coins} />
-            <PriceAlerts coins={coins} />
-            <CryptoCompareWidget coins={coins} />
-            <CryptoNews />
+            <div id="section-converter"><Converter coins={coins} /></div>
+            <div id="section-portfolio"><PortfolioTracker coins={coins} /></div>
+            <div id="section-alerts"><PriceAlerts coins={coins} /></div>
+            <div id="section-compare"><CryptoCompareWidget coins={coins} /></div>
+            <div id="section-stocks"><StockMarketWidget /></div>
+            <div id="section-news"><CryptoNews /></div>
           </>
         )}
 
-        {/* Панель управления и фильтры */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+        {/* Раздел Рынка и Карточек */}
+        <div id="section-market" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             
-            {/* Табы Все / Избранное */}
             <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.35rem', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
               <button
                 onClick={() => setActiveTab('all')}
@@ -194,7 +226,6 @@ export function App() {
               </button>
             </div>
 
-            {/* Фильтры по категориям */}
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
               {[
                 { id: 'all', label: 'Все' },
@@ -223,9 +254,16 @@ export function App() {
               ))}
             </div>
 
-            {/* Сортировка и кнопка обновления */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.5rem 0.85rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem', 
+                background: 'rgba(15, 23, 42, 0.6)', 
+                padding: '0.55rem 0.85rem', 
+                borderRadius: '12px', 
+                border: '1px solid rgba(255, 255, 255, 0.08)' 
+              }}>
                 <ArrowUpDown size={16} color="#94a3b8" />
                 <select
                   value={sortBy}
@@ -237,7 +275,11 @@ export function App() {
                     fontWeight: '500',
                     fontSize: '0.85rem',
                     outline: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    appearance: 'none',
+                    paddingRight: '0.25rem'
                   }}
                 >
                   <option value="market_cap_desc" style={{ background: '#0f172a' }}>По Капитализации</option>

@@ -17,7 +17,32 @@ export const CoinCard: React.FC<CoinCardProps> = ({
   onClick,
 }) => {
   const isPositive = coin.price_change_percentage_24h >= 0;
+  const priceColor = isPositive ? '#4ade80' : '#f87171';
   const glowColor = isPositive ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)';
+
+  // Форматирование цен с учетом дешевых токенов (например Doge, TRX)
+  const formatPrice = (price: number) => {
+    if (price < 1) {
+      return `$${price.toFixed(4)}`;
+    }
+    return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  // Построение SVG-точек для мини-графика (Sparkline)
+  const sparklinePrices = coin.sparkline_in_7d?.price || [];
+  const minPrice = sparklinePrices.length > 0 ? Math.min(...sparklinePrices) : 0;
+  const maxPrice = sparklinePrices.length > 0 ? Math.max(...sparklinePrices) : 0;
+  
+  const svgWidth = 110;
+  const svgHeight = 32;
+  
+  const points = sparklinePrices.length > 1 && maxPrice !== minPrice
+    ? sparklinePrices.map((price, index) => {
+        const x = (index / (sparklinePrices.length - 1)) * svgWidth;
+        const y = svgHeight - ((price - minPrice) / (maxPrice - minPrice)) * svgHeight;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ')
+    : '';
 
   return (
     <motion.div
@@ -33,7 +58,10 @@ export const CoinCard: React.FC<CoinCardProps> = ({
         padding: '1.25rem',
         cursor: 'pointer',
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow = `0 15px 30px -5px ${glowColor}, 0 0 15px ${glowColor}`;
@@ -71,26 +99,43 @@ export const CoinCard: React.FC<CoinCardProps> = ({
         </button>
       </div>
 
-      {/* Цена и изменение */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
-        <span style={{ fontSize: '1.35rem', fontWeight: '800', color: '#fff' }}>
-          ${coin.current_price.toLocaleString()}
-        </span>
+      {/* Цена, Изменение и Мини-график (Sparkline) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1rem' }}>
+        <div>
+          <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff' }}>
+            {formatPrice(coin.current_price)}
+          </div>
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.2rem',
-          padding: '0.25rem 0.6rem',
-          borderRadius: '8px',
-          fontSize: '0.8rem',
-          fontWeight: '700',
-          backgroundColor: isPositive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-          color: isPositive ? '#4ade80' : '#f87171'
-        }}>
-          {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-          {Math.abs(coin.price_change_percentage_24h).toFixed(2)}%
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.2rem',
+            padding: '0.2rem 0.5rem',
+            borderRadius: '8px',
+            fontSize: '0.78rem',
+            fontWeight: '700',
+            backgroundColor: isPositive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+            color: priceColor,
+            marginTop: '0.3rem'
+          }}>
+            {isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+            {isPositive ? '+' : ''}{coin.price_change_percentage_24h.toFixed(2)}%
+          </div>
         </div>
+
+        {/* SVG Sparkline */}
+        {points && (
+          <svg width={svgWidth} height={svgHeight} style={{ overflow: 'visible' }}>
+            <polyline
+              fill="none"
+              stroke={priceColor}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              points={points}
+            />
+          </svg>
+        )}
       </div>
 
       {/* Капитализация */}
